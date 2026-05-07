@@ -21,7 +21,29 @@ const el = {
   footRight: document.getElementById("footRight"),
   btnEnableSound: document.getElementById("btnEnableSound"),
   btnMute: document.getElementById("btnMute"),
+  btnSettings: document.getElementById("btnSettings"),
+  settingsPanel: document.getElementById("settingsPanel"),
+  toggleSound: document.getElementById("toggleSound"),
+  volume: document.getElementById("volume"),
 };
+
+// #region agent log
+function __dbg(hypothesisId, message, data) {
+  fetch("http://127.0.0.1:7618/ingest/f992dcdc-5441-402a-a2bb-8e8f0ba78b99", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "99e8d6" },
+    body: JSON.stringify({
+      sessionId: "99e8d6",
+      runId: "pre-fix",
+      hypothesisId,
+      location: "main.js:__dbg",
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
+// #endregion
 
 function clamp01(n) {
   if (!Number.isFinite(n)) return 0;
@@ -177,6 +199,42 @@ function bgUrlForType(cfg, taskType) {
   return "none";
 }
 
+// backgrounds.json support (same-origin static file)
+let backgrounds = { byColour: {}, byTaskType: {} };
+
+async function loadBackgroundsJson() {
+  try {
+    const resp = await fetch("./backgrounds.json", { cache: "no-store" });
+    if (!resp.ok) return false;
+    const json = await resp.json();
+    if (!json || typeof json !== "object") return false;
+    backgrounds = {
+      byColour: (json.byColour && typeof json.byColour === "object" ? json.byColour : {}) || {},
+      byTaskType: (json.byTaskType && typeof json.byTaskType === "object" ? json.byTaskType : {}) || {},
+    };
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeColourKey(c) {
+  return String(c || "").trim();
+}
+
+function bgUrlForEvent(cfg, ev) {
+  const colourKey = normalizeColourKey(ev?.colour);
+  const byColourUrl = colourKey ? backgrounds.byColour?.[colourKey] : "";
+  if (byColourUrl) return `url("${String(byColourUrl).replace(/"/g, '\\"')}")`;
+
+  const type = classifyTaskType(ev?.title || "");
+  const byTypeUrl = backgrounds.byTaskType?.[type];
+  if (byTypeUrl) return `url("${String(byTypeUrl).replace(/"/g, '\\"')}")`;
+
+  // Fallback to query-params by type (bgStudy/bgBreak/bgPray/bgOther)
+  return bgUrlForType(cfg, type);
+}
+
 function iconForEvent(ev) {
   const icon = String(ev?.icon || "").toLowerCase();
   const title = String(ev?.title || "").toLowerCase();
@@ -296,6 +354,10 @@ el.app.dataset.compact = cfg.compact ? "1" : "0";
 document.documentElement.style.setProperty("--fontScale", String(cfg.fontScale));
 document.documentElement.style.setProperty("--overlayOpacity", String(cfg.bgOpacity));
 document.documentElement.style.setProperty("--bgBlur", `${cfg.bgBlurPx}px`);
+
+// Settings initial UI state
+if (el.toggleSound) el.toggleSound.checked = !audioState.muted;
+if (el.volume) el.volume.value = String(audioState.volume);
 
 const cacheKey = `schedule_cache::${cfg.src}`;
 let schedule = { events: [], errors: [] };
@@ -443,6 +505,20 @@ function tick() {
   const { current, also, next } = pickCurrentAndNext(events, now);
   const prev = tick.prevNow ?? now;
 
+  // #region agent log
+  __dbg("H1", "tick_state", {
+    now,
+    prev,
+    eventCount: events.length,
+    hasCurrent: !!current,
+    hasNext: !!next,
+    currentTitle: current?.title ?? null,
+    nextTitle: next?.title ?? null,
+    nextStartMs: next ? next.start.getTime() : null,
+    nextInMs: next ? next.start.getTime() - now : null,
+  });
+  // #endregion
+
   if (schedule.errors?.length) {
     el.footLeft.textContent = `${schedule.errors.length} line(s) skipped`;
   } else {
@@ -473,7 +549,7 @@ function tick() {
     if (!cfg.hideColours) {
       document.documentElement.style.setProperty("--accent", accentFromColour(current.colour));
     }
-    document.documentElement.style.setProperty("--bgUrl", bgUrlForType(cfg, type));
+    document.documentElement.style.setProperty("--bgUrl", bgUrlForEvent(cfg, current));
 
     if (also.length) {
       el.alsoLine.hidden = false;
@@ -489,6 +565,13 @@ function tick() {
     el.subTitle.textContent = next
       ? `Next: ${next.title} at ${formatHhMm(next.start, cfg.tz)}`
       : "No more tasks after this";
+
+    // #region agent log
+    __dbg("H2", "render_current_strings", {
+      metaLine: el.metaLine.textContent,
+      subTitle: el.subTitle.textContent,
+    });
+    // #endregion
   } else if (next) {
     const until = next.start.getTime() - now;
     el.taskTypePill.textContent = "GAP";
@@ -504,11 +587,19 @@ function tick() {
     if (!cfg.hideColours) {
       document.documentElement.style.setProperty("--accent", accentFromColour(next.colour));
     }
-    document.documentElement.style.setProperty("--bgUrl", bgUrlForType(cfg, type));
+    document.documentElement.style.setProperty("--bgUrl", bgUrlForEvent(cfg, next));
     el.alsoLine.hidden = true;
     maybeSetUpNextWarnings(next, now, cfg.refreshMs);
 
     el.subTitle.textContent = "Between schedule blocks";
+
+    // #region agent log
+    __dbg("H3", "render_gap_strings", {
+      untilMs: next.start.getTime() - now,
+      metaLine: el.metaLine.textContent,
+      subTitle: el.subTitle.textContent,
+    });
+    // #endregion
   } else {
     el.taskTypePill.textContent = "DONE";
     el.currentTitle.textContent = "No more tasks today";
@@ -521,6 +612,13 @@ function tick() {
     el.alsoLine.hidden = true;
     el.subTitle.textContent = "Schedule complete";
     document.documentElement.style.setProperty("--bgUrl", "none");
+
+    // #region agent log
+    __dbg("H4", "render_done_strings", {
+      metaLine: el.metaLine.textContent,
+      subTitle: el.subTitle.textContent,
+    });
+    // #endregion
   }
 
   // Chimes: evaluate all boundaries crossed between prev and now.
@@ -548,10 +646,56 @@ el.btnEnableSound.addEventListener("click", async () => {
 
 el.btnMute.addEventListener("click", () => {
   setMuted(!audioState.muted);
+  if (el.toggleSound) el.toggleSound.checked = !audioState.muted;
 });
+
+// Settings panel toggle
+let settingsOpen = false;
+function setSettingsOpen(open) {
+  settingsOpen = !!open;
+  if (el.settingsPanel) el.settingsPanel.hidden = !settingsOpen;
+}
+
+if (el.btnSettings) {
+  el.btnSettings.addEventListener("click", () => {
+    setSettingsOpen(!settingsOpen);
+  });
+}
+
+if (el.toggleSound) {
+  el.toggleSound.addEventListener("change", () => {
+    setMuted(!el.toggleSound.checked);
+  });
+}
+
+if (el.volume) {
+  el.volume.addEventListener("input", () => {
+    setVolume(Number(el.volume.value));
+  });
+}
+
+// Hide the settings gear when idle
+let lastActivityAt = Date.now();
+function bumpActivity() {
+  lastActivityAt = Date.now();
+  if (el.btnSettings) el.btnSettings.classList.remove("isHidden");
+}
+window.addEventListener("mousemove", bumpActivity, { passive: true });
+window.addEventListener("keydown", bumpActivity);
+window.addEventListener("touchstart", bumpActivity, { passive: true });
+
+setInterval(() => {
+  if (!el.btnSettings) return;
+  if (settingsOpen) return; // keep visible while settings are open
+  const idleMs = Date.now() - lastActivityAt;
+  if (idleMs > 2500) el.btnSettings.classList.add("isHidden");
+}, 300);
 
 // Try to load cache immediately for fast paint.
 loadCache();
+
+// Load optional same-origin background map (non-fatal).
+loadBackgroundsJson().then(() => tick());
 
 // Initial render
 tick();

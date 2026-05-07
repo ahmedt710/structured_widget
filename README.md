@@ -74,6 +74,29 @@ Provide your own background images via query params:
 &bgBlurPx=2
 ```
 
+### backgrounds.json (recommended for static lists)
+
+Instead of putting URLs in the embed link, you can edit `[backgrounds.json](backgrounds.json)` in the widget repo:
+
+- `byColour`: map your schedule `colour` strings (like `"Dark Green"`) to URLs
+- `byTaskType`: fallback map for `study/break/pray/other`
+
+Example:
+
+```json
+{
+  "byColour": {
+    "Dark Green": "https://example.com/pray.jpg",
+    "Orange": "https://example.com/study.jpg"
+  },
+  "byTaskType": {
+    "break": "https://example.com/break.jpg"
+  }
+}
+```
+
+Note: this file must be hosted alongside the widget (same GitHub Pages site).
+
 ## Useful params
 
 - `sound=1|0`, `volume=0..1`

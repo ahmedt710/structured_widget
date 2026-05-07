@@ -26,6 +26,7 @@
             Enable sound
           </button>
           <button class="iconBtn" id="btnMute" title="Mute/unmute">Sound: On</button>
+          <button class="gearBtn" id="btnSettings" title="Settings" aria-label="Settings">⚙️</button>
         </div>
       </header>
 
@@ -48,6 +49,20 @@
             <div class="meta" id="metaLine">—</div>
             <div class="banner" id="banner" hidden></div>
             <div class="also" id="alsoLine" hidden></div>
+          </div>
+        </section>
+
+        <section class="settingsPanel" id="settingsPanel" hidden>
+          <div class="settingsRow">
+            <div class="settingsLabel">Chime</div>
+            <label class="toggle">
+              <input id="toggleSound" type="checkbox" checked />
+              <span class="toggleUi" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="settingsRow">
+            <div class="settingsLabel">Volume</div>
+            <input id="volume" class="range" type="range" min="0" max="1" step="0.01" value="0.35" />
           </div>
         </section>
       </main>
