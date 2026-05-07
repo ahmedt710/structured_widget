@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schedule Widget</title>
+    <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app" data-compact="0">
+      <div class="bg" aria-hidden="true"></div>
+      <div class="overlay" aria-hidden="true"></div>
+
+      <header class="header">
+        <div class="headerLeft">
+          <div class="pill" id="taskTypePill">—</div>
+          <div class="titleWrap">
+            <div class="widgetTitle" id="widgetTitle">Today</div>
+            <div class="subTitle" id="subTitle">Loading schedule…</div>
+          </div>
+        </div>
+
+        <div class="headerRight">
+          <button class="iconBtn" id="btnEnableSound" title="Enable sound" hidden>
+            Enable sound
+          </button>
+          <button class="iconBtn" id="btnTestChime" title="Test chime">Test</button>
+          <button class="iconBtn" id="btnMute" title="Mute/unmute">Sound: On</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="hero">
+          <div class="ring" role="img" aria-label="Progress">
+            <svg viewBox="0 0 120 120" class="ringSvg" aria-hidden="true">
+              <circle class="ringTrack" cx="60" cy="60" r="50" />
+              <circle class="ringValue" cx="60" cy="60" r="50" />
+            </svg>
+            <div class="ringCenter">
+              <div class="bigTime" id="bigTime">--:--</div>
+              <div class="smallLabel" id="smallLabel">—</div>
+            </div>
+          </div>
+
+          <div class="info">
+            <div class="currentTitle" id="currentTitle">—</div>
+            <div class="meta" id="metaLine">—</div>
+            <div class="banner" id="banner" hidden></div>
+            <div class="also" id="alsoLine" hidden></div>
+          </div>
+        </section>
+
+        <section class="controls" id="controls">
+          <button class="btn" id="btnEndEarly" type="button">End current early</button>
+          <button class="btn" id="btnSkipNext" type="button">Skip to next</button>
+          <div class="volumeWrap">
+            <label class="volLabel" for="volume">Volume</label>
+            <input id="volume" type="range" min="0" max="1" step="0.01" value="0.35" />
+          </div>
+        </section>
+
+        <section class="timeline" id="timeline">
+          <div class="timelineHeader">
+            <div class="timelineTitle">Up next</div>
+            <div class="timelineHint" id="timelineHint">—</div>
+          </div>
+          <ol class="timelineList" id="timelineList"></ol>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footLeft" id="footLeft">—</div>
+        <div class="footRight" id="footRight">—</div>
+      </footer>
+    </div>
+
+    <script src="./main.js" defer></script>
+  </body>
+</html>
