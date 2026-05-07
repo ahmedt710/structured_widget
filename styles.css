@@ -23,8 +23,8 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 380px;
-  padding: 16px 16px 12px;
+  min-height: 220px;
+  padding: 12px 12px 10px;
   overflow: hidden;
   transform: scale(var(--fontScale));
   transform-origin: top left;
@@ -107,58 +107,67 @@ body {
 }
 .iconBtn:hover { border-color: hsla(var(--accent) / 0.6); }
 
-.main { display: grid; gap: 12px; }
+.main { display: grid; gap: 10px; }
 
-.hero {
-  display: grid;
-  grid-template-columns: 144px 1fr;
-  gap: 14px;
-  align-items: center;
-  padding: 12px;
+.timerCard {
+  padding: 14px 14px 12px;
   border-radius: 18px;
   background: rgba(10, 12, 16, 0.32);
   border: 1px solid rgba(255,255,255,0.10);
   backdrop-filter: blur(14px);
 }
 
-.ring { width: 144px; height: 144px; position: relative; }
-.ringSvg { width: 144px; height: 144px; transform: rotate(-90deg); }
-.ringTrack {
-  fill: none;
-  stroke: rgba(255,255,255,0.12);
-  stroke-width: 10;
+.timerTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.ringValue {
-  fill: none;
-  stroke: hsla(var(--accent) / 0.95);
-  stroke-width: 10;
-  stroke-linecap: round;
-  stroke-dasharray: 314;
-  stroke-dashoffset: 314;
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
-}
-.ringCenter {
-  position: absolute;
-  inset: 0;
+
+.taskIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  text-align: center;
-  padding: 12px;
+  font-size: 22px;
+  background: hsla(var(--accent) / 0.16);
+  border: 1px solid hsla(var(--accent) / 0.30);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+  flex: 0 0 auto;
 }
+
+.timerTexts { min-width: 0; }
 .bigTime {
-  font-size: 30px;
+  font-size: 56px;
   font-weight: 800;
-  letter-spacing: 0.4px;
+  letter-spacing: -0.6px;
   text-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  line-height: 1;
 }
 .smallLabel {
-  margin-top: 2px;
+  margin-top: 6px;
   font-size: 12px;
   color: hsl(var(--muted));
 }
 
+.progressWrap {
+  margin-top: 12px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+}
+.progressBar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsla(var(--accent) / 0.55), hsla(var(--accent) / 0.95));
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
+}
+
 .currentTitle {
-  font-size: 18px;
+  margin-top: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.18;
   text-shadow: 0 10px 28px rgba(0,0,0,0.55);
@@ -186,65 +195,7 @@ body {
   color: rgba(255,255,255,0.78);
 }
 
-.controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr 170px;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn {
-  appearance: none;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(10,12,16,0.35);
-  color: hsl(var(--text));
-  border-radius: 14px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 650;
-  backdrop-filter: blur(10px);
-}
-.btn:hover { border-color: hsla(var(--accent) / 0.6); }
-
-.volumeWrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(10,12,16,0.35);
-  backdrop-filter: blur(10px);
-}
-.volLabel { font-size: 12px; color: hsl(var(--muted)); }
-#volume { width: 100%; }
-
-.timeline {
-  padding: 12px;
-  border-radius: 18px;
-  background: rgba(10, 12, 16, 0.28);
-  border: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(14px);
-}
-.timelineHeader { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.timelineTitle { font-weight: 800; }
-.timelineHint { font-size: 12px; color: hsl(var(--muted)); }
-.timelineList { list-style: none; padding: 10px 0 0; margin: 0; display: grid; gap: 8px; }
-.tlItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.16);
-}
-.tlLeft { min-width: 0; }
-.tlTitle { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tlTime { font-size: 12px; color: hsl(var(--muted)); }
-.tlRight { font-size: 12px; color: hsl(var(--muted)); white-space: nowrap; }
+/* Simplified: timeline/controls removed from layout */
 
 .footer {
   margin-top: 10px;
@@ -258,18 +209,11 @@ body {
 
 /* Compact mode */
 .app[data-compact="1"] {
-  min-height: 320px;
-  padding: 12px 12px 10px;
+  min-height: 190px;
 }
-.app[data-compact="1"] .controls { grid-template-columns: 1fr 1fr; }
-.app[data-compact="1"] .volumeWrap { display: none; }
-.app[data-compact="1"] .hero { grid-template-columns: 132px 1fr; }
-.app[data-compact="1"] .ring { width: 132px; height: 132px; }
-.app[data-compact="1"] .ringSvg { width: 132px; height: 132px; }
+.app[data-compact="1"] .bigTime { font-size: 46px; }
+.app[data-compact="1"] .taskIcon { width: 42px; height: 42px; border-radius: 12px; }
 
 @media (max-width: 520px) {
-  .hero { grid-template-columns: 1fr; }
-  .ring { margin: 0 auto; }
-  .controls { grid-template-columns: 1fr 1fr; }
-  .volumeWrap { grid-column: 1 / -1; }
+  .bigTime { font-size: 50px; }
 }

@@ -9,23 +9,18 @@ const el = {
   taskTypePill: document.getElementById("taskTypePill"),
   widgetTitle: document.getElementById("widgetTitle"),
   subTitle: document.getElementById("subTitle"),
+  taskIcon: document.getElementById("taskIcon"),
   bigTime: document.getElementById("bigTime"),
   smallLabel: document.getElementById("smallLabel"),
+  progressBar: document.getElementById("progressBar"),
   currentTitle: document.getElementById("currentTitle"),
   metaLine: document.getElementById("metaLine"),
   banner: document.getElementById("banner"),
   alsoLine: document.getElementById("alsoLine"),
-  timeline: document.getElementById("timeline"),
-  timelineHint: document.getElementById("timelineHint"),
-  timelineList: document.getElementById("timelineList"),
   footLeft: document.getElementById("footLeft"),
   footRight: document.getElementById("footRight"),
   btnEnableSound: document.getElementById("btnEnableSound"),
-  btnTestChime: document.getElementById("btnTestChime"),
   btnMute: document.getElementById("btnMute"),
-  btnEndEarly: document.getElementById("btnEndEarly"),
-  btnSkipNext: document.getElementById("btnSkipNext"),
-  volume: document.getElementById("volume"),
 };
 
 function clamp01(n) {
@@ -60,7 +55,6 @@ function getQuery() {
     sound: bool("sound", true),
     volume: clamp01(num("volume", 0.35)),
     compact: bool("compact", false),
-    hideTimeline: bool("hideTimeline", false),
     hideIcons: bool("hideIcons", false),
     hideColours: bool("hideColours", false),
     fontScale: Math.max(0.8, Math.min(1.2, num("fontScale", 1))),
@@ -183,6 +177,26 @@ function bgUrlForType(cfg, taskType) {
   return "none";
 }
 
+function iconForEvent(ev) {
+  const icon = String(ev?.icon || "").toLowerCase();
+  const title = String(ev?.title || "").toLowerCase();
+  const type = classifyTaskType(title);
+
+  if (icon.includes("mosque") || type === "pray") return "🕌";
+  if (icon.includes("dumbbell") || title.includes("gym")) return "🏋️";
+  if (icon.includes("meal") || title.includes("lunch")) return "🍽️";
+  if (icon.includes("moon") || title.includes("sleep")) return "🌙";
+  if (icon.includes("book") || type === "study") return "📚";
+  if (icon.includes("desktop")) return "💻";
+  if (icon.includes("iphone")) return "📵";
+  if (icon.includes("alarm")) return "⏰";
+  if (icon.includes("shower")) return "🚿";
+  if (icon.includes("sunset") || title.includes("wind down")) return "🌅";
+  if (icon.includes("task")) return "✅";
+  if (type === "break") return "☕";
+  return "⏱️";
+}
+
 // ---------- Audio (soothing chime) ----------
 
 /** @type {AudioContext | null} */
@@ -265,7 +279,6 @@ function setMuted(m) {
 
 function setVolume(v) {
   audioState.volume = clamp01(v);
-  el.volume.value = String(audioState.volume);
 }
 
 function canAutoplaySound() {
@@ -283,7 +296,6 @@ el.app.dataset.compact = cfg.compact ? "1" : "0";
 document.documentElement.style.setProperty("--fontScale", String(cfg.fontScale));
 document.documentElement.style.setProperty("--overlayOpacity", String(cfg.bgOpacity));
 document.documentElement.style.setProperty("--bgBlur", `${cfg.bgBlurPx}px`);
-if (cfg.hideTimeline) el.timeline.hidden = true;
 
 const cacheKey = `schedule_cache::${cfg.src}`;
 let schedule = { events: [], errors: [] };
@@ -354,13 +366,9 @@ function pickCurrentAndNext(events, now) {
   return { current, also, next };
 }
 
-function setRingProgress(progress01) {
-  const p = clamp01(progress01);
-  const circumference = 2 * Math.PI * 50; // r=50 matches svg
-  const offset = circumference * (1 - p);
-  const ring = document.querySelector(".ringValue");
-  ring.style.strokeDasharray = `${circumference}`;
-  ring.style.strokeDashoffset = `${offset}`;
+function setProgress(progress01) {
+  const p = clamp01(progress01) * 100;
+  el.progressBar.style.width = `${p.toFixed(2)}%`;
 }
 
 function setBanner(text) {
@@ -415,42 +423,6 @@ function maybeSetUpNextWarnings(next, now, refreshMs) {
   setBanner(until <= 5 * 60000 && until > 0 ? `Next starts in ${formatDurationMs(until)}` : "");
 }
 
-function renderTimeline(events, now, tz) {
-  const upcoming = events.filter((ev) => ev.end.getTime() > now).slice(0, 6);
-  el.timelineList.innerHTML = "";
-  if (upcoming.length === 0) {
-    el.timelineHint.textContent = "No more events";
-    return;
-  }
-  el.timelineHint.textContent = `${upcoming.length} shown`;
-
-  for (const ev of upcoming) {
-    const li = document.createElement("li");
-    li.className = "tlItem";
-    const left = document.createElement("div");
-    left.className = "tlLeft";
-    const title = document.createElement("div");
-    title.className = "tlTitle";
-    title.textContent = ev.title;
-    const time = document.createElement("div");
-    time.className = "tlTime";
-    time.textContent = `${formatHhMm(ev.start, tz)}–${formatHhMm(ev.end, tz)}`;
-    left.appendChild(title);
-    left.appendChild(time);
-
-    const right = document.createElement("div");
-    right.className = "tlRight";
-    if (ev.start.getTime() > now) {
-      right.textContent = `in ${formatDurationMs(ev.start.getTime() - now)}`;
-    } else {
-      right.textContent = `ends in ${formatDurationMs(ev.end.getTime() - now)}`;
-    }
-    li.appendChild(left);
-    li.appendChild(right);
-    el.timelineList.appendChild(li);
-  }
-}
-
 function setTheme(theme) {
   // Minimal: auto uses system. Dark-first design.
   // If you want light mode later, we can add a light token set.
@@ -487,17 +459,20 @@ function tick() {
     const remaining = current.end.getTime() - now;
     el.taskTypePill.textContent = classifyTaskType(current.title).toUpperCase();
     el.currentTitle.textContent = current.title;
+    el.taskIcon.textContent = cfg.hideIcons ? "" : iconForEvent(current);
     el.bigTime.textContent = formatDurationMs(remaining);
     el.smallLabel.textContent = "time left";
     el.metaLine.textContent = `Ends at ${formatHhMm(current.end, cfg.tz)}`;
 
     const denom = current.end.getTime() - current.start.getTime();
     const prog = denom > 0 ? (now - current.start.getTime()) / denom : 0;
-    setRingProgress(prog);
+    setProgress(prog);
 
     // Accent + background by task type
     const type = classifyTaskType(current.title);
-    document.documentElement.style.setProperty("--accent", accentFromColour(current.colour));
+    if (!cfg.hideColours) {
+      document.documentElement.style.setProperty("--accent", accentFromColour(current.colour));
+    }
     document.documentElement.style.setProperty("--bgUrl", bgUrlForType(cfg, type));
 
     if (also.length) {
@@ -518,14 +493,17 @@ function tick() {
     const until = next.start.getTime() - now;
     el.taskTypePill.textContent = "GAP";
     el.currentTitle.textContent = "No current task";
+    el.taskIcon.textContent = cfg.hideIcons ? "" : iconForEvent(next);
     el.bigTime.textContent = formatDurationMs(until);
     el.smallLabel.textContent = "until next";
     el.metaLine.textContent = `Next: ${next.title} at ${formatHhMm(next.start, cfg.tz)}`;
-    setRingProgress(0);
+    setProgress(0);
 
     // Background based on upcoming task type
     const type = classifyTaskType(next.title);
-    document.documentElement.style.setProperty("--accent", accentFromColour(next.colour));
+    if (!cfg.hideColours) {
+      document.documentElement.style.setProperty("--accent", accentFromColour(next.colour));
+    }
     document.documentElement.style.setProperty("--bgUrl", bgUrlForType(cfg, type));
     el.alsoLine.hidden = true;
     maybeSetUpNextWarnings(next, now, cfg.refreshMs);
@@ -534,10 +512,11 @@ function tick() {
   } else {
     el.taskTypePill.textContent = "DONE";
     el.currentTitle.textContent = "No more tasks today";
+    el.taskIcon.textContent = cfg.hideIcons ? "" : "✅";
     el.bigTime.textContent = "--:--";
     el.smallLabel.textContent = "finished";
     el.metaLine.textContent = "Enjoy the rest of your day";
-    setRingProgress(0);
+    setProgress(1);
     setBanner("");
     el.alsoLine.hidden = true;
     el.subTitle.textContent = "Schedule complete";
@@ -552,7 +531,6 @@ function tick() {
     }
   }
 
-  if (!cfg.hideTimeline) renderTimeline(events, now, cfg.tz);
   tick.prevNow = now;
 }
 
@@ -568,48 +546,8 @@ el.btnEnableSound.addEventListener("click", async () => {
   }
 });
 
-el.btnTestChime.addEventListener("click", async () => {
-  if (!audioUnlocked) {
-    const ok = await unlockAudio();
-    if (!ok) {
-      el.btnEnableSound.hidden = false;
-      return;
-    }
-    el.btnEnableSound.hidden = true;
-  }
-  playChime({ strength: 1 });
-});
-
 el.btnMute.addEventListener("click", () => {
   setMuted(!audioState.muted);
-});
-
-el.volume.addEventListener("input", () => {
-  setVolume(Number(el.volume.value));
-});
-
-el.btnSkipNext.addEventListener("click", () => {
-  const now = nowMs();
-  const next = schedule.events.find((ev) => ev.start.getTime() > now);
-  if (!next) return;
-  override.forceNowMs = next.start.getTime();
-  setTimeout(() => {
-    override.forceNowMs = null;
-  }, 1500);
-  maybeChimeAtBoundary(next.start.getTime(), "start");
-});
-
-el.btnEndEarly.addEventListener("click", () => {
-  const now = nowMs();
-  const current = schedule.events
-    .filter((ev) => ev.start.getTime() <= now && now < ev.end.getTime())
-    .sort((a, b) => b.start - a.start)[0];
-  if (!current) return;
-  override.forceNowMs = current.end.getTime();
-  setTimeout(() => {
-    override.forceNowMs = null;
-  }, 1500);
-  maybeChimeAtBoundary(current.end.getTime(), "end");
 });
 
 // Try to load cache immediately for fast paint.
